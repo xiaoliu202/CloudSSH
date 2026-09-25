@@ -29,12 +29,12 @@ export class AIConfigPanel {
       'responsive-modal hidden fixed inset-0 z-[100] flex items-center justify-center';
     this.modalEl.innerHTML = `
       <div class="modal-overlay absolute inset-0" id="ai-modal-backdrop"></div>
-      <div class="responsive-modal-panel cyber-box p-6 shadow-2xl relative z-10 w-full max-w-md mx-4">
+      <div class="responsive-modal-panel cyber-box p-6 shadow-2xl relative z-10 w-full max-w-md sm:max-w-lg mx-4">
         <div class="theme-accent-line absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[var(--accent-secondary)] to-transparent opacity-50"></div>
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-dim">
           <span class="text-xs font-bold tracking-[0.1em] text-[var(--accent-secondary)]" data-i18n="aiConfig.title">AI Agent 设置</span>
-          <button id="ai-modal-close-btn" class="text-muted hover:text-primary transition-colors cursor-pointer" type="button">
-            <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+          <button id="ai-modal-close-btn" class="panel-close-btn" data-i18n-aria-label="common.close" aria-label="关闭" type="button">
+            <span class="material-symbols-outlined">close</span>
           </button>
         </div>
         <form id="ai-config-form" class="space-y-4">
@@ -57,7 +57,7 @@ export class AIConfigPanel {
           <div>
             <label class="block text-xs font-bold tracking-[0.1em] text-muted mb-2" data-i18n="aiConfig.model">模型</label>
             <div class="flex gap-2 items-center">
-              <div class="relative flex-1" id="ai-model-combobox">
+              <div class="relative flex-1 min-w-0" id="ai-model-combobox">
                 <div class="relative flex items-center">
                   <input
                     id="ai-model"

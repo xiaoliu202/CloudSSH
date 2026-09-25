@@ -71,6 +71,23 @@ export interface SSHConnectionConfig {
   jumpHosts?: SSHJumpHostConfig[];
   /** 仅可由 Worker 内部的一次性分享兑换流程写入，客户端输入必须剥离。 */
   sessionPolicy?: SSHSessionPolicy;
+  /**
+   * 传输协议类型：'direct'（直连 TCP / 跳板机）或 'cf_tunnel'（Cloudflare 隧道 WSS）
+   */
+  transportType?: 'direct' | 'cf_tunnel';
+  /**
+   * Cloudflare 隧道公共主机名（例如 ssh.example.com）。
+   * 仅在 transportType === 'cf_tunnel' 时生效。
+   */
+  cfTunnelHost?: string;
+  /**
+   * Cloudflare Zero Trust Access Service Token Client ID（可选）
+   */
+  cfAccessClientId?: string;
+  /**
+   * Cloudflare Zero Trust Access Service Token Client Secret（可选）
+   */
+  cfAccessClientSecret?: string;
 }
 
 export interface SSHSessionPolicy {
@@ -168,13 +185,27 @@ export interface Env {
   DEBUG_MODE?: string;
   // 一次性 SSH 分享（默认关闭；true 时登录用户可创建分享链接）
   ENABLE_SSH_SHARING?: string;
+  // 单管理员密码认证（可选）。
+  // 格式：pbkdf2$sha256$<iterations>$<salt-b64url>$<verifier-b64url>，由 `pnpm run hash-password` 生成。
+  // 非空且格式合法即启用密码模式：GitHub OAuth 路由禁用，全实例仅本地管理员一个账号。
+  // 置空/删除即刻退回 GitHub 模式；verifier = SHA-256(PBKDF2(password, salt, iterations))。
+  // 浏览器端执行 PBKDF2 预拉伸（server relief），Worker 侧仅做一次 SHA-256 比对（Free 套餐 CPU 安全）。
+  ADMIN_PASSWORD_HASH?: string;
+}
+
+/** /api/config 下发的密码认证公开参数（盐与迭代数非机密，供浏览器预拉伸） */
+export interface PasswordAuthParams {
+  kdf: 'pbkdf2-sha256';
+  iterations: number;
+  salt: string; // base64url
 }
 
 export interface UserInfo {
   id: number;
   github_id: number;
   username: string;
-  avatar_url: string;
+  /** 本地管理员（密码模式）无头像，恒为 null；GitHub 用户为头像 URL */
+  avatar_url: string | null;
 }
 
 export interface ServerConfig {
@@ -195,6 +226,14 @@ export interface ServerConfig {
   os?: string | null;
   /** Optional saved server used as the immediate SSH jump host. */
   jump_server_id?: number | null;
+  /** 传输协议类型：直连 TCP ('direct') 或 Cloudflare 隧道 ('cf_tunnel')，默认为 'direct' */
+  transport_type?: 'direct' | 'cf_tunnel';
+  /** Cloudflare 隧道公共主机名（如 ssh.example.com） */
+  cf_tunnel_host?: string | null;
+  /** Cloudflare Zero Trust Access Service Token Client ID（可选） */
+  cf_access_client_id?: string | null;
+  /** 是否已保存 Cloudflare Zero Trust Access Service Token Secret */
+  has_cf_access_client_secret?: boolean;
   created_at: string;
   updated_at: string;
 }

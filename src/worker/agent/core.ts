@@ -178,7 +178,8 @@ export class AgentCore {
     userId: string,
     userMessage: string,
     locale: AgentLocale = 'zh-CN',
-    timezone?: string
+    timezone?: string,
+    userIndex?: number
   ): Promise<void> {
     this.preferredLocale = locale;
     if (timezone && typeof timezone === 'string' && timezone.length <= 64) {
@@ -188,6 +189,29 @@ export class AgentCore {
     if (this.loopTimeout) {
       clearTimeout(this.loopTimeout);
       this.loopTimeout = null;
+    }
+
+    // 若已有运行中的任务，抢占式中止旧任务，防止并发通道竞争与 Token 浪费
+    if (this.state.status === 'running') {
+      this.agentAbort('superseded');
+    }
+
+    if (typeof userIndex === 'number' && userIndex >= 0) {
+      // 截断目标用户消息及其后续所有消息（原地编辑重写）
+      let currentUserCount = 0;
+      let targetIndex = -1;
+      for (let i = 0; i < this.state.messages.length; i++) {
+        if (this.state.messages[i].role === 'user') {
+          if (currentUserCount === userIndex) {
+            targetIndex = i;
+            break;
+          }
+          currentUserCount++;
+        }
+      }
+      if (targetIndex !== -1) {
+        this.state.messages = this.state.messages.slice(0, targetIndex);
+      }
     }
 
     // 判断是否为新会话（首次启动或状态已重置）
@@ -280,6 +304,18 @@ export class AgentCore {
       this.abortController.abort(reason);
       this.state.status = 'idle';
     }
+  }
+
+  resetSession(): void {
+    this.agentAbort('reset');
+    this.state = { status: 'idle', messages: [], iteration: 0 };
+    this.terminalContextSnapshot = '';
+    this.environmentContext = '';
+    this.progress = {
+      uniqueCommands: new Set(),
+      recentToolCalls: [],
+      extensionUsed: 0,
+    };
   }
 
   private async runLoop(): Promise<void> {
@@ -419,7 +455,9 @@ export class AgentCore {
             choice.message.content?.trim() ||
             (this.preferredLocale === 'en-US'
               ? '[Reasoning reached single-turn token limit, proceeding to action]'
-              : '[推导达到单次 Token 限制，继续执行下一步]');
+              : this.preferredLocale === 'zh-TW'
+                ? '[推導達到單次 Token 限制，繼續執行下一步]'
+                : '[推导达到单次 Token 限制，继续执行下一步]');
 
           this.state.messages.push({
             role: 'assistant',
@@ -436,7 +474,9 @@ export class AgentCore {
           const continuePrompt =
             this.preferredLocale === 'en-US'
               ? 'The previous step reached the single-turn token limit. Please directly invoke the necessary tool(s) (e.g. execute_command) to execute the next action or provide the concise final conclusion now, without lengthy internal monologue.'
-              : '上一步推导达到单次 Token 上限。请直接调用相应的运维工具（如 execute_command）执行操作或简明给出最终结论，避免冗长思考。';
+              : this.preferredLocale === 'zh-TW'
+                ? '上一步推導達到單次 Token 上限。請直接調用相應的維運工具（如 execute_command）執行操作或簡明給出最終結論，避免冗長思考。'
+                : '上一步推导达到单次 Token 上限。请直接调用相应的运维工具（如 execute_command）执行操作或简明给出最终结论，避免冗长思考。';
 
           this.state.messages.push({
             role: 'user',
@@ -463,8 +503,14 @@ export class AgentCore {
             choice.finish_reason === 'length'
               ? (this.preferredLocale === 'en-US'
                   ? 'Task reasoning repeatedly reached the token limit. Please consider breaking down the task into smaller steps.'
-                  : '任务分析连续超出单次 Token 上限。建议将复杂任务拆解为小步骤逐步执行。')
-              : (this.preferredLocale === 'en-US' ? 'Task completed.' : '任务已执行完成。');
+                  : this.preferredLocale === 'zh-TW'
+                    ? '任務分析連續超出單次 Token 上限。建議將複雜任務拆解為小步驟逐步執行。'
+                    : '任务分析连续超出单次 Token 上限。建议将复杂任务拆解为小步骤逐步执行。')
+              : (this.preferredLocale === 'en-US'
+                  ? 'Task completed.'
+                  : this.preferredLocale === 'zh-TW'
+                    ? '任務已執行完成。'
+                    : '任务已执行完成。');
 
           this.sendToFrontend({
             type: 'agent_frame',
@@ -480,8 +526,14 @@ export class AgentCore {
             (choice.finish_reason === 'length'
               ? (this.preferredLocale === 'en-US'
                   ? 'Task reasoning repeatedly reached the token limit. Please consider breaking down the task into smaller steps.'
-                  : '任务分析连续超出单次 Token 上限。建议将复杂任务拆解为小步骤逐步执行。')
-              : (this.preferredLocale === 'en-US' ? 'Task completed.' : '任务已执行完成。')),
+                  : this.preferredLocale === 'zh-TW'
+                    ? '任務分析連續超出單次 Token 上限。建議將複雜任務拆解為小步驟逐步執行。'
+                    : '任务分析连续超出单次 Token 上限。建议将复杂任务拆解为小步骤逐步执行。')
+              : (this.preferredLocale === 'en-US'
+                  ? 'Task completed.'
+                  : this.preferredLocale === 'zh-TW'
+                    ? '任務已執行完成。'
+                    : '任务已执行完成。')),
         });
         this.state.status = 'idle';
         const snapshotMsgs = extractDistillationSnapshot(this.state.messages);
@@ -494,20 +546,43 @@ export class AgentCore {
 
       // Loop exited — notify frontend of the reason
       if (signal.aborted) {
-        // 超时退出时通知前端；会话连接断开时前端已断开无需发送
         const reasonStr = String(signal.reason || '');
-        if (!reasonStr.includes('connection_closed')) {
+        if (reasonStr === 'user_stopped') {
+          const stopMsg =
+            this.preferredLocale === 'en-US'
+              ? 'Agent task stopped by user.'
+              : this.preferredLocale === 'zh-TW'
+                ? 'Agent 任務已由使用者手動停止。'
+                : 'Agent 任务已由用户手动停止。';
           this.sendToFrontend({
             type: 'agent_frame',
             subType: 'response',
-            content: `Agent 执行超时（已运行 ${this.state.iteration} 步），已自动停止。请检查终端状态，或发送新消息继续操作。`,
+            content: stopMsg,
+          });
+        } else if (
+          reasonStr === 'superseded' ||
+          reasonStr.includes('connection_closed') ||
+          reasonStr === 'reset'
+        ) {
+          // 新任务抢占、连接断开或会话重置：无需发送超时通知
+        } else {
+          const timeoutMsg =
+            this.preferredLocale === 'en-US'
+              ? `Agent execution timed out (ran ${this.state.iteration} steps) and was automatically stopped. Please check the terminal state or send a new message.`
+              : this.preferredLocale === 'zh-TW'
+                ? `Agent 執行超時（已運行 ${this.state.iteration} 步），已自動停止。請檢查終端狀態，或發送新訊息繼續操作。`
+                : `Agent 执行超时（已运行 ${this.state.iteration} 步），已自动停止。请检查终端状态，或发送新消息继续操作。`;
+          this.sendToFrontend({
+            type: 'agent_frame',
+            subType: 'response',
+            content: timeoutMsg,
           });
         }
       }
 
       // 迭代上限、超时或连接关闭导致的退出：若已有实质性命令执行，触发阶段性中断记忆提炼
       const hasExecuted = this.state.iteration > 0 || this.progress.recentToolCalls.length > 0;
-      if (hasExecuted) {
+      if (hasExecuted && signal.reason !== 'reset') {
         const snapshotMsgs = extractDistillationSnapshot(this.state.messages);
         const distillPromise = this.triggerMemoryDistillationIfEligible(snapshotMsgs, {
           interrupted: signal.aborted,
@@ -929,13 +1004,31 @@ export class AgentCore {
     const parts: string[] = [basePrompt, languageInstruction];
 
     if (this.environmentContext) {
-      parts.push(`## 当前服务器环境\n${this.environmentContext}`);
+      const header =
+        this.preferredLocale === 'en-US'
+          ? '## Current Server Environment'
+          : this.preferredLocale === 'zh-TW'
+            ? '## 目前伺服器環境'
+            : '## 当前服务器环境';
+      parts.push(`${header}\n${this.environmentContext}`);
     }
     if (this.terminalContextSnapshot) {
-      parts.push(`## 交互式终端最近输出\n${this.terminalContextSnapshot}`);
+      const header =
+        this.preferredLocale === 'en-US'
+          ? '## Recent Interactive Terminal Output'
+          : this.preferredLocale === 'zh-TW'
+            ? '## 互動式終端最近輸出'
+            : '## 交互式终端最近输出';
+      parts.push(`${header}\n${this.terminalContextSnapshot}`);
     }
     if (this.state.summary) {
-      parts.push(`## 当前会话未决任务与决策摘要\n${this.state.summary}`);
+      const header =
+        this.preferredLocale === 'en-US'
+          ? '## Current Session Pending Tasks and Decision Summary'
+          : this.preferredLocale === 'zh-TW'
+            ? '## 目前會話未決任務與決策摘要'
+            : '## 当前会话未决任务与决策摘要';
+      parts.push(`${header}\n${this.state.summary}`);
     }
     if (this.unifiedMemory.workLogs.length > 0 || this.unifiedMemory.knowledge.length > 0) {
       const memoryText = formatServerMemoryForPrompt(
@@ -1166,10 +1259,16 @@ ${conversationText}${previousSection}`;
         if (normLog.ok) {
           workLogToSave = normLog.value;
           if (options?.interrupted && workLogToSave) {
-            const prefix = this.preferredLocale === 'en-US' ? '[Interrupted] ' : '[已中断] ';
+            const prefix =
+              this.preferredLocale === 'en-US'
+                ? '[Interrupted] '
+                : this.preferredLocale === 'zh-TW'
+                  ? '[已中斷] '
+                  : '[已中断] ';
             if (
               !workLogToSave.title.startsWith(prefix) &&
               !workLogToSave.title.startsWith('[已中断]') &&
+              !workLogToSave.title.startsWith('[已中斷]') &&
               !workLogToSave.title.startsWith('[Interrupted]')
             ) {
               workLogToSave.title = `${prefix}${workLogToSave.title}`.slice(
@@ -1181,13 +1280,26 @@ ${conversationText}${previousSection}`;
         }
       } else if (options?.interrupted && snapshotMsgs.length >= 2) {
         // 模型未返回 workLog 时，针对中断会话合成基础留痕，确保断线不丢失上下文
-        const userMsg = snapshotMsgs.find((m) => m.role === 'user')?.content || '运维任务';
+        const defaultUserMsg =
+          this.preferredLocale === 'en-US'
+            ? 'Ops task'
+            : this.preferredLocale === 'zh-TW'
+              ? '維運任務'
+              : '运维任务';
+        const userMsg = snapshotMsgs.find((m) => m.role === 'user')?.content || defaultUserMsg;
         const truncatedUserMsg = userMsg.slice(0, 30);
-        const prefix = this.preferredLocale === 'en-US' ? '[Interrupted] ' : '[已中断] ';
+        const prefix =
+          this.preferredLocale === 'en-US'
+            ? '[Interrupted] '
+            : this.preferredLocale === 'zh-TW'
+              ? '[已中斷] '
+              : '[已中断] ';
         const summary =
           this.preferredLocale === 'en-US'
             ? `Task was interrupted after step ${this.state.iteration}.`
-            : `任务在执行第 ${this.state.iteration} 步时被中断或网络断开。`;
+            : this.preferredLocale === 'zh-TW'
+              ? `任務在執行第 ${this.state.iteration} 步時被中斷或網路斷線。`
+              : `任务在执行第 ${this.state.iteration} 步时被中断或网络断开。`;
         workLogToSave = {
           mode: 'create',
           title: `${prefix}${truncatedUserMsg}`.slice(0, WORK_LOG_TITLE_MAX_LENGTH),

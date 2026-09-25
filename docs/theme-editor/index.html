@@ -2184,10 +2184,7 @@
           <option value="standard-dark">Standard Dark</option>
           <option value="standard-light">Standard Light</option>
           <option value="cyberpunk" selected>Cyberpunk</option>
-          <option value="apple">Apple</option>
-          <option value="gruvbox">Gruvbox</option>
-          <option value="crt">CRT Amber</option>
-          <option value="glass">Glass</option>
+          <option value="liquid-glass">Liquid Glass</option>
         </select>
         <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
       </div>
@@ -2471,10 +2468,7 @@
                   <option value="standard-dark">Standard Dark</option>
                   <option value="standard-light">Standard Light</option>
                   <option value="cyberpunk" selected>Cyberpunk</option>
-                  <option value="apple">Apple</option>
-                  <option value="gruvbox">Gruvbox</option>
-                  <option value="crt">CRT Amber</option>
-                  <option value="glass">Glass</option>
+                  <option value="liquid-glass">Liquid Glass</option>
                 </select>
                 <span class="material-symbols-outlined terminal-tool-icon">upload_file</span>
                 <span class="material-symbols-outlined terminal-tool-icon">folder_open</span>
@@ -2707,6 +2701,7 @@ const TRANSLATIONS = {
   'zh-CN': {
     'page.title': 'CloudSSH 主题在线编辑器',
     'language.zhCN': '简体中文',
+    'language.zhTW': '繁體中文',
     'language.enUS': 'English',
     'language.switchTo': '切换到{language}',
     'editor.title': '主题在线编辑器',
@@ -2822,7 +2817,7 @@ const TRANSLATIONS = {
     'option.standard': '标准',
     'option.cyberpunk': '赛博朋克',
     'option.soft': '柔和',
-    'option.dense': '紧凑',
+    'option.liquid': '液态玻璃',
     'option.square': '方正',
     'option.rounded': '圆角',
     'option.compact': '紧凑',
@@ -2886,6 +2881,7 @@ const TRANSLATIONS = {
   'en-US': {
     'page.title': 'CloudSSH Theme Editor',
     'language.zhCN': '简体中文',
+    'language.zhTW': '繁體中文',
     'language.enUS': 'English',
     'language.switchTo': 'Switch to {language}',
     'editor.title': 'THEME EDITOR',
@@ -3001,7 +2997,7 @@ const TRANSLATIONS = {
     'option.standard': 'Standard',
     'option.cyberpunk': 'Cyberpunk',
     'option.soft': 'Soft',
-    'option.dense': 'Dense',
+    'option.liquid': 'Liquid Glass',
     'option.square': 'Square',
     'option.rounded': 'Rounded',
     'option.compact': 'Compact',
@@ -3061,7 +3057,187 @@ const TRANSLATIONS = {
     'variable.modalOverlay': 'Modal Overlay',
     'variable.onSurface': 'Surface Text',
     'variable.onSurfaceVariant': 'Surface Text Variant',
-  }
+  },
+
+  'zh-TW': {
+    'page.title': 'CloudSSH 主題線上編輯器',
+    'language.zhCN': '簡體中文',
+    'language.zhTW': '繁體中文',
+    'language.enUS': 'English',
+    'language.switchTo': '切換到{language}',
+    'editor.title': '主題線上編輯器',
+    'editor.import': '匯入',
+    'editor.export': '匯出',
+    'editor.importTitle': '匯入主題 JSON',
+    'editor.exportTitle': '匯出主題 JSON',
+    'editor.presets': '預設主題',
+    'editor.custom': '自定義',
+    'preview.login': '匿名連線',
+    'preview.userSpace': '使用者空間',
+    'preview.modal': '（彈窗預覽）',
+    'preview.terminalSftp': '終端與 SFTP',
+    'preview.agent': 'AI Agent 面板（思考進度）',
+    'common.optional': '可選',
+    'common.password': '密碼',
+    'common.privateKey': '私鑰',
+    'common.connect': '連線',
+    'common.documentation': '文件',
+    'auth.connectionParameters': '連線參數',
+    'auth.host': '主機位址',
+    'auth.port': '連接埠',
+    'auth.user': '使用者名稱',
+    'auth.method': '驗證方式',
+    'auth.regionHint': '連線區域',
+    'auth.remember': '記住連線資訊',
+    'auth.execute': '建立連線',
+    'auth.statusOffline': '狀態：離線',
+    'auth.recent': '最近連線',
+    'region.auto': '自動（儲存時由系統推斷）',
+    'server.list': '伺服器列表',
+    'server.manage': '管理你的 SSH 連線',
+    'server.add': '新增伺服器',
+    'server.searchPlaceholder': '按名稱、主機或使用者名稱搜尋',
+    'server.hostLabel': '主機',
+    'server.userLabel': '使用者',
+    'server.regionLabel': '區域',
+    'server.regionAuto': '自動',
+    'server.regionManual': '手動',
+    'server.name': '伺服器名稱',
+    'server.save': '儲存伺服器',
+    'terminal.connected': '已連線',
+    'terminal.host': '主機：{value}',
+    'terminal.user': '使用者：{value}',
+    'terminal.port': '連接埠：{value}',
+    'terminal.wsSendingCredentials': '[+] WebSocket 已連線，正在傳送憑據…',
+    'terminal.wsAuthenticating': '[*] WebSocket 已連線，正在驗證…',
+    'terminal.authSuccess': '[*] 驗證成功',
+    'terminal.askAISelection': '詢問 AI 助手',
+    'sftp.title': 'SFTP 檔案管理器',
+    'sftp.uploadAction': '上傳檔案',
+    'sftp.mkdirAction': '新增資料夾',
+    'sftp.downloadAction': '下載',
+    'sftp.deleteAction': '刪除',
+    'sftp.renameAction': '重新命名',
+    'sftp.ready': '就緒',
+    'sftp.count': '2 個目錄，4 個檔案',
+    'agent.title': 'AI Agent 助手',
+    'agent.sampleRequest': '幫我檢查伺服器的設定資訊',
+    'agent.completedSteps': '已完成 5 個步驟',
+    'agent.sampleTitle': '伺服器設定資訊彙總',
+    'agent.item': '項目',
+    'agent.value': '值',
+    'agent.os': '作業系統',
+    'agent.kernel': '核心版本',
+    'agent.memory': '記憶體',
+    'agent.sampleAdvice': '建議先檢查服務狀態：',
+    'agent.codeTarget': '目標：{value}',
+    'agent.codeCopy': '複製',
+    'agent.codeFill': '填入終端',
+    'agent.placeholder': '描述你希望 Agent 完成的任務…',
+    'feedback.imported': '主題匯入成功。',
+    'feedback.exported': '主題 JSON 已匯出。',
+    'feedback.missingUi': '主題檔案不包含有效的顏色、終端或外觀設定。',
+    'feedback.invalidJson': '檔案不是有效的主題 JSON。',
+    'feedback.fileTooLarge': '主題檔案不能超過 64 KiB。',
+    'feedback.invalidColor': '請先修正標紅的無效顏色值。',
+    'group.basic': '主題資訊',
+    'group.appearance': '整體外觀',
+    'group.componentStyles': '元件樣式',
+    'group.themeV3Background': '背景層（V3）',
+    'group.themeV3Effects': '效果（V3）',
+    'group.themeV3Typography': '版式縮放（V3）',
+    'background.type': '背景型別',
+    'background.angle': '漸變角度',
+    'background.scrim': '讀性遮罩',
+    'background.animation': '背景動畫',
+    'background.stop1': '停靠點 1',
+    'background.stop2': '停靠點 2',
+    'background.stop3': '停靠點 3',
+    'background.stop4': '停靠點 4',
+    'effects.scanline': '掃描線',
+    'effects.flicker': '閃爍',
+    'effects.glow': '輝光',
+    'effects.noise': '噪點',
+    'typography.fontScale': '字號縮放',
+    'typography.radiusScale': '圓角縮放',
+    'appearance.name': '主題名稱',
+    'appearance.colorScheme': '明暗模式',
+    'appearance.style': '整體風格',
+    'appearance.shape': '形狀',
+    'appearance.density': '密度',
+    'appearance.font': '字型',
+    'appearance.shadow': '陰影',
+    'appearance.motion': '動效',
+    'appearance.blur': '表面模糊',
+    'appearance.button': '按鈕',
+    'appearance.input': '輸入框',
+    'appearance.card': '卡片',
+    'appearance.tabs': '標籤頁',
+    'option.dark': '深色',
+    'option.light': '淺色',
+    'option.standard': '標準',
+    'option.cyberpunk': '賽博朋克',
+    'option.soft': '柔和',
+    'option.liquid': '液態玻璃',
+    'option.square': '方正',
+    'option.rounded': '圓角',
+    'option.compact': '緊湊',
+    'option.comfortable': '舒適',
+    'option.spacious': '寬鬆',
+    'option.mono': '等寬字型',
+    'option.system': '系統字型',
+    'option.none': '無',
+    'option.subtle': '輕微',
+    'option.elevated': '懸浮',
+    'option.solid': '實心',
+    'option.linear': '線性漸變',
+    'option.radial': '徑向漸變',
+    'option.mesh': '網格漸變',
+    'option.drift': '緩慢漂移',
+    'option.reduced': '精簡',
+    'option.full': '完整',
+    'option.outline': '描邊',
+    'option.underline': '下劃線',
+    'option.boxed': '方框',
+    'option.outlined': '描邊',
+    'option.flat': '扁平',
+    'option.segmented': '分段',
+    'group.backgrounds': '背景顏色',
+    'group.text': '文字顏色',
+    'group.accents': '強調顏色',
+    'group.borders': '邊框',
+    'group.error': '錯誤狀態',
+    'group.components': '元件',
+    'group.agent': 'AI Agent',
+    'group.effects': '視覺效果',
+    'variable.bg': '頁面背景',
+    'variable.bgSurface': '卡片 / 表面',
+    'variable.bgElevated': '浮層表面',
+    'variable.bgTerminal': '終端背景',
+    'variable.text': '主要文字',
+    'variable.textMuted': '次要文字',
+    'variable.textDim': '弱化文字',
+    'variable.accent': '主要強調色',
+    'variable.accentSecondary': '次要強調色',
+    'variable.accentSecondaryLight': '次要淺色',
+    'variable.onAccent': '強調色上的文字',
+    'variable.border': '邊框',
+    'variable.borderStrong': '強邊框',
+    'variable.error': '錯誤文字',
+    'variable.errorBg': '錯誤背景',
+    'variable.surfaceDot': '狀態點',
+    'variable.scrollbarTrack': '捲軸軌道',
+    'variable.scrollbarThumb': '捲軸滑塊',
+    'variable.scrollbarThumbHover': '捲軸懸停',
+    'variable.agentUser': '使用者訊息',
+    'variable.agentBot': 'Agent 訊息',
+    'variable.scanline': '掃描線疊層',
+    'variable.accentGlow': '強調色光暈',
+    'variable.accentBg': '強調色背景',
+    'variable.modalOverlay': '彈窗遮罩',
+    'variable.onSurface': '表面文字',
+    'variable.onSurfaceVariant': '表面次要文字',
+  },
 };
 
 const LOCALE_STORAGE_KEY = 'cloudssh_locale';
@@ -3069,7 +3245,17 @@ let locale = 'zh-CN';
 
 function normalizeLocale(value) {
   if (!value) return null;
-  const normalized = String(value).replace('_', '-').toLowerCase();
+  const normalized = String(value).replace(/_/g, '-').toLowerCase();
+  if (
+    normalized === 'zh-tw' ||
+    normalized.startsWith('zh-tw-') ||
+    normalized === 'zh-hk' ||
+    normalized.startsWith('zh-hk-') ||
+    normalized === 'zh-mo' ||
+    normalized.startsWith('zh-mo-') ||
+    normalized === 'zh-hant' ||
+    normalized.startsWith('zh-hant-')
+  ) return 'zh-TW';
   if (normalized === 'zh' || normalized.startsWith('zh-')) return 'zh-CN';
   if (normalized === 'en' || normalized.startsWith('en-')) return 'en-US';
   return null;
@@ -3107,8 +3293,9 @@ function translateDocument() {
     element.textContent = t(element.dataset.i18nTemplate, { value: element.dataset.value || '' });
   });
 
-  const alternateLocale = locale === 'zh-CN' ? 'en-US' : 'zh-CN';
-  const alternateLabel = TRANSLATIONS[alternateLocale][`language.${alternateLocale === 'zh-CN' ? 'zhCN' : 'enUS'}`];
+  const alternateLocale = locale === 'zh-CN' ? 'zh-TW' : locale === 'zh-TW' ? 'en-US' : 'zh-CN';
+  const alternateKey = alternateLocale === 'zh-CN' ? 'zhCN' : alternateLocale === 'zh-TW' ? 'zhTW' : 'enUS';
+  const alternateLabel = TRANSLATIONS[alternateLocale]['language.' + alternateKey];
   const languageButton = document.getElementById('language-toggle');
   document.getElementById('language-toggle-label').textContent = alternateLabel;
   languageButton.title = t('language.switchTo', { language: alternateLabel });
@@ -3353,236 +3540,16 @@ const PRESETS = /* THEME_PRESETS_START */ {
       "--agent-agent-color": "#14d1ff"
     }
   },
-  "apple": {
-    "name": "Apple",
+  "liquid-glass": {
+    "name": "Liquid Glass",
     "colorScheme": "light",
     "appearance": {
-      "style": "soft",
+      "style": "liquid",
       "shape": "soft",
       "density": "comfortable",
       "font": "system",
       "shadow": "elevated",
-      "motion": "reduced",
-      "blur": "strong",
-      "components": {
-        "button": "soft",
-        "input": "boxed",
-        "card": "elevated",
-        "tabs": "segmented"
-      }
-    },
-    "terminal": {
-      "background": "#ffffff",
-      "foreground": "#1d1d1f",
-      "cursor": "#0066da",
-      "cursorAccent": "#ffffff",
-      "selectionBackground": "#b3d7ff",
-      "selectionForeground": "#1d1d1f",
-      "selectionInactiveBackground": "#dde8f7",
-      "black": "#1d1d1f",
-      "red": "#d70015",
-      "green": "#248a3d",
-      "yellow": "#b25000",
-      "blue": "#0040dd",
-      "magenta": "#8944ab",
-      "cyan": "#0b7285",
-      "white": "#8e8e93",
-      "brightBlack": "#6e6e73",
-      "brightRed": "#ff3b30",
-      "brightGreen": "#34c759",
-      "brightYellow": "#c93400",
-      "brightBlue": "#0071e3",
-      "brightMagenta": "#af52de",
-      "brightCyan": "#30b0c7",
-      "brightWhite": "#1d1d1f"
-    },
-    "ui": {
-      "--bg": "#f5f5f7",
-      "--bg-surface": "#ffffff",
-      "--bg-elevated": "#ffffff",
-      "--bg-terminal": "#ffffff",
-      "--text": "#1d1d1f",
-      "--text-muted": "#636368",
-      "--text-dim": "#6e6e73",
-      "--accent": "#0066da",
-      "--accent-secondary": "#0052b4",
-      "--accent-secondary-light": "#cce4ff",
-      "--border": "#d2d2d7",
-      "--border-strong": "#aeaeb2",
-      "--error": "#d70015",
-      "--error-bg": "#ffebe9",
-      "--on-accent": "#ffffff",
-      "--surface-dot": "#e8e8ed",
-      "--scrollbar-track": "rgba(210, 210, 215, 0.45)",
-      "--scrollbar-thumb": "rgba(99, 99, 104, 0.35)",
-      "--scrollbar-thumb-hover": "rgba(99, 99, 104, 0.55)",
-      "--scanline-tint": "transparent",
-      "--accent-glow": "rgba(0, 102, 218, 0.08)",
-      "--accent-bg": "rgba(0, 102, 218, 0.1)",
-      "--modal-overlay": "rgba(0, 0, 0, 0.32)",
-      "--on-surface": "#1d1d1f",
-      "--on-surface-variant": "#636368",
-      "--agent-user-color": "#0066da",
-      "--agent-agent-color": "#5856d6"
-    }
-  },
-  "gruvbox": {
-    "name": "Gruvbox",
-    "colorScheme": "dark",
-    "appearance": {
-      "style": "dense",
-      "shape": "rounded",
-      "density": "compact",
-      "font": "mono",
-      "shadow": "none",
-      "motion": "reduced",
-      "blur": "none",
-      "components": {
-        "button": "outline",
-        "input": "boxed",
-        "card": "flat",
-        "tabs": "segmented"
-      }
-    },
-    "terminal": {
-      "background": "#282828",
-      "foreground": "#ebdbb2",
-      "cursor": "#d3869b",
-      "cursorAccent": "#282828",
-      "selectionBackground": "#504945"
-    },
-    "ui": {
-      "--bg": "#282828",
-      "--bg-surface": "#303030",
-      "--bg-elevated": "#282828",
-      "--bg-terminal": "#1d2021",
-      "--text": "#ebdbb2",
-      "--text-muted": "#a89984",
-      "--text-dim": "#665c54",
-      "--accent": "#b8bb26",
-      "--accent-secondary": "#83a598",
-      "--accent-secondary-light": "#8ec07c",
-      "--border": "#3c3836",
-      "--border-strong": "#665c54",
-      "--error": "#fb4934",
-      "--error-bg": "#3d0000",
-      "--on-accent": "#282828",
-      "--surface-dot": "#3c3836",
-      "--scrollbar-track": "rgba(40, 40, 40, 0.5)",
-      "--scrollbar-thumb": "rgba(168, 153, 132, 0.3)",
-      "--scrollbar-thumb-hover": "rgba(168, 153, 132, 0.5)",
-      "--scanline-tint": "rgba(184, 187, 38, 0.02)",
-      "--accent-glow": "rgba(184, 187, 38, 0.08)",
-      "--accent-bg": "rgba(184, 187, 38, 0.1)",
-      "--modal-overlay": "rgba(0, 0, 0, 0.75)",
-      "--on-surface": "#ebdbb2",
-      "--on-surface-variant": "#a89984",
-      "--agent-user-color": "#b8bb26",
-      "--agent-agent-color": "#83a598"
-    }
-  },
-  "crt": {
-    "name": "CRT Amber",
-    "colorScheme": "dark",
-    "appearance": {
-      "style": "cyberpunk",
-      "shape": "square",
-      "density": "compact",
-      "font": "mono",
-      "shadow": "none",
       "motion": "full",
-      "blur": "none",
-      "components": {
-        "button": "outline",
-        "input": "underline",
-        "card": "outlined",
-        "tabs": "underline"
-      }
-    },
-    "background": {
-      "type": "radial",
-      "stops": [
-        "#261b00",
-        "#0f0a00"
-      ],
-      "angle": 160,
-      "scrim": 0.3,
-      "animation": "none"
-    },
-    "effects": {
-      "scanline": 1,
-      "flicker": 0.6,
-      "glow": 0.5
-    },
-    "typography": {
-      "fontScale": 1,
-      "radiusScale": 0.75
-    },
-    "terminal": {
-      "background": "#0f0a00",
-      "foreground": "#ffb000",
-      "cursor": "#ffd257",
-      "cursorAccent": "#0f0a00",
-      "selectionBackground": "#3d2e00",
-      "selectionForeground": "#ffb000",
-      "selectionInactiveBackground": "#2a2000",
-      "black": "#241a00",
-      "red": "#ff6b4a",
-      "green": "#d4a017",
-      "yellow": "#ffb000",
-      "blue": "#f0c040",
-      "magenta": "#e08e39",
-      "cyan": "#c8b04a",
-      "white": "#d9c08a",
-      "brightBlack": "#8a7440",
-      "brightRed": "#ffa080",
-      "brightGreen": "#ffd257",
-      "brightYellow": "#ffe08a",
-      "brightBlue": "#ffe8b0",
-      "brightMagenta": "#ffc27a",
-      "brightCyan": "#e8d89a",
-      "brightWhite": "#fff3c4"
-    },
-    "ui": {
-      "--bg": "#0f0a00",
-      "--bg-surface": "#171000",
-      "--bg-elevated": "#1d1600",
-      "--bg-terminal": "#0f0a00",
-      "--text": "#ffb000",
-      "--text-muted": "#bfa06a",
-      "--text-dim": "#937c46",
-      "--accent": "#ffb000",
-      "--accent-secondary": "#ffd257",
-      "--accent-secondary-light": "#ffe08a",
-      "--border": "#3d2e00",
-      "--border-strong": "#5c470a",
-      "--error": "#ff6b4a",
-      "--error-bg": "#3d1200",
-      "--on-accent": "#0f0a00",
-      "--surface-dot": "#3d2e00",
-      "--scrollbar-track": "rgba(23, 16, 0, 0.5)",
-      "--scrollbar-thumb": "rgba(255, 176, 0, 0.25)",
-      "--scrollbar-thumb-hover": "rgba(255, 176, 0, 0.45)",
-      "--scanline-tint": "rgba(255, 176, 0, 0.03)",
-      "--accent-glow": "rgba(255, 176, 0, 0.12)",
-      "--accent-bg": "rgba(255, 176, 0, 0.12)",
-      "--modal-overlay": "rgba(0, 0, 0, 0.8)",
-      "--on-surface": "#fff3c4",
-      "--on-surface-variant": "#bfa06a",
-      "--agent-user-color": "#ffb000",
-      "--agent-agent-color": "#ffd257"
-    }
-  },
-  "glass": {
-    "name": "Glass",
-    "colorScheme": "light",
-    "appearance": {
-      "style": "soft",
-      "shape": "soft",
-      "density": "comfortable",
-      "font": "system",
-      "shadow": "elevated",
-      "motion": "reduced",
       "blur": "strong",
       "components": {
         "button": "soft",
@@ -3594,74 +3561,76 @@ const PRESETS = /* THEME_PRESETS_START */ {
     "background": {
       "type": "mesh",
       "stops": [
-        "#d3e3f8",
-        "#e8edf5",
-        "#ece0f6"
+        "#a2d2ff",
+        "#d8b4fe",
+        "#ffc8dd",
+        "#bde0fe",
+        "#ffdfba"
       ],
       "angle": 135,
       "scrim": 0.35,
       "animation": "drift"
     },
     "effects": {
-      "glow": 0.4
+      "glow": 0.35
     },
     "typography": {
-      "fontScale": 1.05,
+      "fontScale": 1.02,
       "radiusScale": 1.4
     },
     "terminal": {
-      "background": "#ffffff",
-      "foreground": "#1a2332",
-      "cursor": "#235cd8",
+      "background": "#fbfbfd",
+      "foreground": "#1d1d1f",
+      "cursor": "#0071e3",
       "cursorAccent": "#ffffff",
-      "selectionBackground": "#c4d8f7",
-      "selectionForeground": "#1a2332",
-      "selectionInactiveBackground": "#dde8f7",
-      "black": "#1a2332",
-      "red": "#c03528",
-      "green": "#1e7d3c",
-      "yellow": "#8a5a00",
-      "blue": "#235cd8",
-      "magenta": "#7c4dcc",
-      "cyan": "#0e6e86",
-      "white": "#56637a",
-      "brightBlack": "#56637a",
-      "brightRed": "#d9483b",
-      "brightGreen": "#2a944f",
-      "brightYellow": "#a86e10",
-      "brightBlue": "#3870e8",
-      "brightMagenta": "#8f5ce6",
-      "brightCyan": "#2a8ba3",
-      "brightWhite": "#0e1626"
+      "selectionBackground": "#b3d7ff",
+      "selectionForeground": "#1d1d1f",
+      "selectionInactiveBackground": "#e5f0ff",
+      "black": "#1d1d1f",
+      "red": "#ff3b30",
+      "green": "#34c759",
+      "yellow": "#ff9500",
+      "blue": "#0071e3",
+      "magenta": "#af52de",
+      "cyan": "#55bef0",
+      "white": "#8e8e93",
+      "brightBlack": "#636366",
+      "brightRed": "#ff453a",
+      "brightGreen": "#30d158",
+      "brightYellow": "#ffd60a",
+      "brightBlue": "#409cff",
+      "brightMagenta": "#bf5af2",
+      "brightCyan": "#64d2ff",
+      "brightWhite": "#1d1d1f"
     },
     "ui": {
-      "--bg": "#e8edf5",
-      "--bg-surface": "#f4f7fb",
-      "--bg-elevated": "#ffffff",
-      "--bg-terminal": "#ffffff",
-      "--text": "#1a2332",
-      "--text-muted": "#4d5a70",
-      "--text-dim": "#56637a",
-      "--accent": "#235cd8",
-      "--accent-secondary": "#3870e8",
-      "--accent-secondary-light": "#c4d8f7",
-      "--border": "#c9d4e3",
-      "--border-strong": "#a9b8cc",
-      "--error": "#c03528",
-      "--error-bg": "#f9e3e0",
+      "--bg": "#e6ecf4",
+      "--bg-surface": "rgba(255, 255, 255, 0.22)",
+      "--bg-elevated": "rgba(255, 255, 255, 0.38)",
+      "--bg-terminal": "rgba(255, 255, 255, 0.88)",
+      "--text": "#1d1d1f",
+      "--text-muted": "#515154",
+      "--text-dim": "#69696e",
+      "--accent": "#0066da",
+      "--accent-secondary": "#5856d6",
+      "--accent-secondary-light": "#c7dfff",
+      "--border": "rgba(255, 255, 255, 0.42)",
+      "--border-strong": "rgba(255, 255, 255, 0.72)",
+      "--error": "#d70015",
+      "--error-bg": "rgba(215, 0, 21, 0.12)",
       "--on-accent": "#ffffff",
-      "--surface-dot": "#d5deea",
-      "--scrollbar-track": "rgba(201, 212, 227, 0.45)",
-      "--scrollbar-thumb": "rgba(77, 90, 112, 0.3)",
-      "--scrollbar-thumb-hover": "rgba(77, 90, 112, 0.5)",
+      "--surface-dot": "rgba(0, 0, 0, 0.08)",
+      "--scrollbar-track": "rgba(0, 0, 0, 0.03)",
+      "--scrollbar-thumb": "rgba(0, 0, 0, 0.18)",
+      "--scrollbar-thumb-hover": "rgba(0, 0, 0, 0.32)",
       "--scanline-tint": "transparent",
-      "--accent-glow": "rgba(35, 92, 216, 0.1)",
-      "--accent-bg": "rgba(35, 92, 216, 0.08)",
-      "--modal-overlay": "rgba(26, 35, 50, 0.35)",
-      "--on-surface": "#1a2332",
-      "--on-surface-variant": "#4d5a70",
-      "--agent-user-color": "#235cd8",
-      "--agent-agent-color": "#7c4dcc"
+      "--accent-glow": "rgba(0, 102, 218, 0.16)",
+      "--accent-bg": "rgba(0, 102, 218, 0.1)",
+      "--modal-overlay": "rgba(20, 24, 33, 0.28)",
+      "--on-surface": "#1d1d1f",
+      "--on-surface-variant": "#515154",
+      "--agent-user-color": "#0066da",
+      "--agent-agent-color": "#5856d6"
     }
   }
 } /* THEME_PRESETS_END */;
@@ -3720,7 +3689,7 @@ const THEME_MAX_BYTES = 64 * 1024;
 const invalidColorProperties = new Set();
 
 const APPEARANCE_FIELDS = [
-  { key: 'style', labelKey: 'appearance.style', values: ['standard', 'cyberpunk', 'soft', 'dense'] },
+  { key: 'style', labelKey: 'appearance.style', values: ['standard', 'cyberpunk', 'soft', 'dense', 'liquid'] },
   { key: 'shape', labelKey: 'appearance.shape', values: ['square', 'rounded', 'soft'] },
   { key: 'density', labelKey: 'appearance.density', values: ['compact', 'comfortable', 'spacious'] },
   { key: 'font', labelKey: 'appearance.font', values: ['mono', 'system'] },
@@ -4146,7 +4115,7 @@ document.getElementById('btn-export').addEventListener('click', () => {
     Object.keys(PRESETS['standard-dark'].terminal),
   );
   const output = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     name: themeName.trim() || 'Custom',
     baseTheme: activePreset || (colorScheme === 'light' ? 'standard-light' : 'cyberpunk'),
     colorScheme,
@@ -4275,7 +4244,7 @@ function inferColorScheme(background) {
 }
 
 document.getElementById('language-toggle').addEventListener('click', () => {
-  setLocale(locale === 'zh-CN' ? 'en-US' : 'zh-CN');
+  setLocale(locale === 'zh-CN' ? 'zh-TW' : locale === 'zh-TW' ? 'en-US' : 'zh-CN');
 });
 
 document.querySelectorAll('[data-current-year]').forEach((element) => {

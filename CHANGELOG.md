@@ -5,6 +5,255 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-09-24
+
+### Added
+
+- **单管理员密码登录模式（与 GitHub OAuth 互斥，密码优先）**：
+  - 新增单一环境变量 `ADMIN_PASSWORD_HASH`（非空即启用密码模式）：全实例仅本地管理员一个账号，服务器管理、SFTP、AI Agent、一次性分享、主题/片段/AI 配置等功能与 GitHub 登录完全对等；置空或删除即刻退回 GitHub 模式，两侧配置与数据零影响；
+  - 浏览器内哈希生成器（密码不出浏览器、不绑定设备，任意设备可登录）：匿名实例认证页脚入口、全模式 `#password-setup` 直路由与坏哈希面板重新生成三处入口；另提供 `pnpm run hash-password` 本地 CLI 生成脚本；
+  - 登录链路采用客户端 PBKDF2 预拉伸（server relief），Worker 侧仅做 SHA-256 恒时比对，兼容 Workers Free 套餐 10ms CPU 限制；
+  - 防爆破三道防线：同源 Origin 校验（防跨站登录 CSRF）、Turnstile（已配置时必验）、哨兵 DO 持久化指数退避节流（5 次连败起步、封顶 15 分钟、跨 isolate 权威）；
+  - 会话令牌内嵌密码代际指纹（`-1:<fp8>:<random>`）：更换哈希即刻吊销全部旧会话；双向模式门拒绝跨模式残留会话与一次性令牌；
+  - 哈希非空但格式损坏时 fail closed（登录 500 + 前端错误面板），绝不静默回退；
+  - 密码登录与哈希生成器 UI 完成移动端适配（对话框近全屏 + 安全区、44px 触摸目标、页脚入口独占整行、iOS 聚焦防缩放）。
+- **一次性 SSH 分享随部署默认启用**：`wrangler.toml` `[vars]` 置 `ENABLE_SSH_SHARING = "true"`，Git 集成/CLI 部署开箱即用（关闭改为 `false`；Dashboard 手动上传部署不受影响）。
+
+### Changed
+
+- **部署默认变量完善**：`IDLE_TIMEOUT`（`"30m"`）、`REQUIRE_GITHUB_AUTH`（`"false"`）、`STRICT_HOST_KEY_VERIFY`（`"true"`）随 `wrangler.toml` `[vars]` 默认下发，与代码默认完全一致（配置权威归位配置文件）；test 环境 `REQUIRE_GITHUB_AUTH` 默认 `"true"`，用于端到端验证强制登录链路；
+- `REQUIRE_GITHUB_AUTH` 语义泛化为「要求登录」：GitHub 或单管理员密码会话均满足，变量名保留兼容；
+- **CF 隧道连接表单移除端口字段**：隧道模式隐藏端口输入（域名输入占满整行）、服务器卡片仅展示域名——连接只看域名，实际 SSH 端口由内网 cloudflared 配置决定，端口仅作存储记录（缺省回落 22）；
+- 密码生成器入口改为模式感知：仅匿名模式显示页脚入口（GitHub/密码模式隐藏，既有实例升级后界面零变化），切换与轮换经 `#password-setup` 直路由（消费后清地址栏，兼容同页 hash 导航）。
+
+### Fixed
+
+- **云端自定义主题槽被陈旧导入污染且无法清除**：
+  - `restoreCloudTheme` 回填收紧：仅当本地选择停留在自定义主题（`__custom__`）时才向账号同步，杜绝浏览器残留导入污染全新账号（如密码模式新建管理员）的云端主题槽；
+  - 新增 `DELETE /api/user/theme` 幂等端点：登录态切换到内置主题 = 明确放弃自定义槽，同步清除本地缓存、选择器自定义项（含液态分段控制条）与云端记录，杜绝跨设备复现；导入文件仍为自定义主题唯一写入路径；
+  - 契约测试同步演进并新增主题槽生命周期用例（7 项）。
+
+## [2.4.4] - 2026-09-22
+
+### Added
+
+- **繁体中文（台灣 / Traditional Chinese）全链路支持 (#147)**：
+  - 前端新增完整 `zh-TW` 本地化词典，全面覆盖认证、服务器列表、标签页管理、终端交互、状态栏、快捷键、SFTP 文件管理器、在线编辑、命令片段库、AI Agent 面板与分享会话；
+  - 顶栏语言切换器升级为三语循环切换（`zh-CN` -> `zh-TW` -> `en-US` -> `zh-CN`），支持通过 URL 参数（`?lang=zh-TW`）或本地存储（`cloudssh_locale`）持久化偏好；
+  - [GitHub Pages 主题在线编辑器](https://newbietan.github.io/CloudSSH/)同步补齐完整的 `zh-TW` 词典与三语切换支持；
+  - 统一服务器记忆模块（`server-memory-schema`）支持 `MemoryLocale`（`zh-TW`），日期与星期使用台湾惯用格式（如 `週一`、`3 天前`）；
+  - 感谢 @tbdavid2019 对繁体中文界面及词典的贡献。
+
+### Fixed
+
+- **港澳繁中语系解析兼容（`zh-HK` / `zh-MO`）**：
+  - 完善 `normalizeLocale` 逻辑，支持自动将 `zh-HK`（香港繁中）、`zh-MO`（澳门繁中）及其衍生变体规范化映射至 `zh-TW`，避免港澳浏览器环境误回退为简体中文；
+  - 增强下划线容错处理（`replaceAll('_', '-')`），支持 `zh_Hant_TW` 等多段标签。
+- **台湾 IT 惯用词校正与机翻痕迹消除**：
+  - 修复 `terminal.resumeStale` 错词，由「正在重新增立」校正为「正在重新建立」；
+  - 修复 SFTP 文件删除确认标题与消息中的生硬表述（「刪除專案」校正为「刪除項目」）；
+  - 统一剪贴板读取/写入与 SFTP 权限列中的「許可權」为标准「權限」；
+  - 优化 Agent 错误排查词条，将「報錯」调整为更地道的「錯誤訊息」；
+  - 修复主题编辑器预览表格表头中的「專案」为「項目」。
+- **AI Agent 核心循环繁中状态同步与前端记忆面板直通**：
+  - 修复前端 `agent-panel.ts` 渲染记忆面板时将 `zh-TW` 错误截断降级为 `zh-CN` 的缺陷，确保繁体相对日期与时间基准原样生效；
+  - 补全 `AgentCore` 内部循环对 `zh-TW` 语言环境的状态提示语、Token 限制续跑占位符、用户手动停止通知、执行超时提示与任务完成兜底文本；
+  - 完善中断运维会话的日志合成逻辑，确保繁体环境自动打上 `[已中斷]` 前缀与繁中摘要，且防重叠检查同时覆盖 `[已中斷]` 与 `[已中断]`；
+  - 扩充 Agent 记忆提炼熔断正则 `TRIVIAL_GREETING_PATTERN`，支持复合问候及繁体常用词（`早安`、`在嗎`、`哈囉` 等），并补充 `KNOWLEDGE_KEYWORD_PATTERN` 对 `連接埠`、`金鑰`、`記住`、`憑據` 的识别，提炼上下文标题全面支持繁中本地化。
+
+## [2.4.3] - 2026-09-22
+
+### Fixed
+
+- **Cloudflare 隧道出站重定向跟随缺陷（凭据外带风险 + 诊断失效）**：
+  - 隧道出站握手 `fetch` 显式声明 `redirect: 'manual'`：默认的 `follow` 会把 Zero Trust 的 302 重定向跟随到登录页，使已实现的 3xx 诊断分支永不生效（用户只能看到“未能升级为 WebSocket (HTTP 200 OK)”），同时会把 `CF-Access-Client-Secret` 原样转发到重定向目标；现与 `src/worker/index.ts`、`agent/core.ts` 等出站请求的既有口径对齐；
+  - 克隆服务器表单在克隆模式隐藏「清除已存密钥」按钮，避免与「克隆需重新输入 Client Secret」占位提示互相冲突（克隆体本无已存密钥可清除）；
+  - 补充「仅配置 Client ID」用例锁定凭据头各自独立发送的行为，并在既有出站用例中锁定 `redirect: 'manual'`。
+- **标签栏右侧无效纵向滚动条**：
+  - `#tab-bar` 使用 `overflow-x-auto` 时 CSS 会把 `overflow-y` 隐式提升为 `auto`，而标签项上下各 3px margin 的 margin-box（36px）比 36px 高度减去 1px 下边框后的可用高度多出 1px，Chrome 因此在标签栏右端绘制一条无意义的纵向滚动条；
+  - 修复：标签栏显式声明 `overflow-y-hidden`，仅保留横向滚动能力；实测 `scrollHeight` 由 36 收敛回 35，标签项与 active 强调线均不被裁切；
+  - 新增回归用例锁定 `overflow-y: hidden`、纵向无可滚动溢出且横向滚动未被一并关闭。
+
+### Changed
+
+- `AGENTS.md` #37 / #38 补充两条约束文档：抽屉收起（`closeAllDrawers()`）会按既有语义中断在途 SFTP 传输；隧道出站握手必须保持 `redirect: 'manual'`。
+
+## [2.4.2] - 2026-09-21
+
+### Fixed
+
+- **Cloudflare 隧道出站握手协议头补齐与 Zero Trust 诊断增强 (#143)**：
+  - 补齐 RFC 6455 规范出站 WebSocket 必须携带的 `Connection: Upgrade` 与 `Sec-WebSocket-Version: 13` 请求头，修复穿越 Cloudflare Zero Trust 边缘网关时因缺少 `Connection` 头被判定为普通 HTTP GET 请求而导致 403 拦截的缺陷；
+  - 细化 Zero Trust 401/403/302 拦截时的错误提示，自动提取响应头中的 `CF-RAY` 追踪 ID，并在错误信息中精准区分“未配置或缺少 Service Token”与“已携带 Service Token 但鉴权被拒”场景，指引用户检查 Access 策略并对齐审计日志；
+  - 前端 Service Token Secret 读取追加首尾空格清理（`.trim()`），防止控制台复制引入不可见换行符；
+  - 优化克隆服务器体验，针对 Service Token Secret 提供重新录入提示与占位说明，避免因未显式继承导致凭据缺失；
+  - 补充隧道协议头出站断言与 CF-RAY 错误回显测试用例。
+
+## [2.4.1] - 2026-09-21
+
+### Fixed
+
+- **新建连接与多标签切换时主动收起 AI Agent 与侧边抽屉**：
+  - 修复用户在使用 AI Agent 过程中点击标签栏「+」（新建连接）切换到服务器列表或连接页时，AI Agent 窗口未主动收起并覆盖在服务器列表上方的 UI 缺陷；
+  - `TabManager` 新增 `closeAllDrawers()` 方法，统一收起所有标签页的 AI Agent 抽屉与 SFTP 文件管理面板，并同步清理 `document.body` 上的 `agent-panel-open` 类名；
+  - `main.ts` 实现全局抽屉收起函数 `closeAllDrawers()`，在进入连接页（`showConnectionPage`）、退出终端视图（`deactivateTerminalView`）以及新开标签页（`showTerminalWithNewTab`）时主动收起全部抽屉，并将顶栏液态分段抽屉切换器（`LiquidSegmentedDrawerControl`）复位为未激活状态；
+  - 切换终端标签页时联动关闭全局命令片段（Snippet）抽屉，消除跨会话残留；
+  - 补充源码级断言与端到端回归用例，确保页面导航与抽屉状态机收敛。
+
+## [2.4.0] - 2026-09-20
+
+### Added
+
+- **Cloudflare 隧道（Zero Trust Tunnel）原生直连支持**：
+  - 支持通过 Cloudflare Tunnel（`cloudflared`）穿透内网直接连接无公网 IP、无开放端口的私有服务器（HomeLab、内网主机等），无需设置端口映射或跳板机；
+  - 底层基于 Cloudflare Tunnel 官方标准 WebSocket Carrier 机制传输原始 SSH 二进制字节流；新增 `src/worker/tunnel-stream.ts`（`TunnelWebSocketStream`）将出站 WebSocket 连接封装为标准 WHATWG 可读与可写双工流，与 CloudSSH 自研纯 TypeScript SSH-2.0 协议栈（TOFU 主机密钥校验、密码/私钥认证、Shell 交互、SFTP 图形化管理、在线编辑、AI Agent 控制循环）全量无感知复用；
+  - 支持可选的 Cloudflare Zero Trust Access Service Token（Client ID / Client Secret）鉴权，并通过 AES-GCM 行级加密持久化，API 响应严格脱敏（仅暴露 `has_cf_access_client_secret` 状态），连接令牌签发时安全解密流转；
+  - 针对 Zero Trust 访问拦截（401 / 403 / 302 重定向）提供精准的 Service Token 配置引导与错误提示。
+- **开放隧道模式手动指定 DO 区域偏好（Location Hint）**：
+  - 隧道模式下支持手动选择连接区域（Region），用户可显式指定与内网主机物理位置最近的 Cloudflare 数据中心区域（如 `apac`），促使 Durable Object 就近实例化，彻底消除因客户端接入点跨洋分流引发的三角路由延迟（实测端到端延迟降低 60% 以上）；
+  - 隧道服务器在卡片上展示专属 `CF 隧道` 徽标、域名快速复制与区域调度状态标签（`[cloud] 亚太地区 [手动]` / `[cloud] 自动 [自动]`）。
+- **Zero Trust 凭据生命周期与清除交互**：
+  - 编辑已存服务器时，针对已配置的 Service Token Secret 提供「清除已存密钥」一键交互，支持用户在 Zero Trust 移除访问策略后一键将后端密文重置清空，杜绝残留脏数据。
+
+### Fixed / Changed
+
+- **隧道域名轻量格式校验与输入防御**：
+  - 双端封装并复用 `isValidTunnelHostname` 纯函数，确保输入的隧道主机名为合法的标准公开域名（FQDN），在保存与连接阶段前置拦截纯 IP 字面量、单级主机名（如 `localhost`）及非法格式字符；
+  - 完善 `TunnelWebSocketStream` 资源释放生命周期，在流关闭时显式解绑底层全部 WebSocket 事件监听器；
+  - 修复 `toSSHMPInt` 随机测试在首字节恰为 `0x00` 时长度断言偶发抖动的 CI 缺陷。
+- **用户体验与端口引导优化**：
+  - 在添加/编辑服务器对话框中，隧道模式下为端口输入框增加清晰的内网映射辅助提示，避免用户对 22 与 443 端口产生理解歧义。
+
+## [2.3.2] - 2026-09-19
+
+### Fixed / Changed
+
+- **桌面抽屉分段条在匿名模式下泄露展示 AI Agent 按钮（UI 状态缺陷）**：
+  - `.drawer-segmented-btn` 在 `style.css` 中声明的 `display: inline-flex` 位于 `@tailwind utilities` 之后，同等特异性 `(0, 1, 0)` 下覆盖了 Tailwind 的 `.hidden { display: none }`，导致匿名模式下尽管 `#agent-toggle-btn` 带有 `hidden` 类，在桌面端依然被计算为 `inline-flex` 并可见；
+  - 修复：在 `style.css` 中增加 `.drawer-segmented-btn.hidden { display: none }`，以 `(0, 2, 0)` 特异性确保带 `hidden` 类时彻底隐藏（同时对一次性分享会话下的自定义命令按钮隐藏提供双重保证）；
+  - 控制器与状态健全：在 `drawer-segmented.ts` 中增强 `handleButtonClick` 与 `setActive` 防御，阻止隐藏抽屉按钮的触发与透镜滑块位移；在 `main.ts` 的 `showAuthSection()` 与 `initTerminalTab()` 中显式添加 `hidden` 状态；
+  - 完善 E2E 真实可见性守护（`toBeHidden()` / `toBeVisible()`），防止样式级联问题回归。
+- **文档与测试架构结构同步**：
+  - `AGENTS.md`：补齐核心目录树中的 `server-memory-schema.ts`、`share-resume-schema.ts`、`drawer-segmented.ts`、`theme-segmented.ts`、`device-identity.ts`、`api-errors.ts`，并新增 Common Pitfalls 37（液态分段切换器与 CSS Hidden 特异性规范）；
+  - `tests/README.md`：补齐目录树中的测试文件，将主题测试范围升级为 Theme V4，补充抽屉分段条及相关 E2E 回归说明；
+  - `README.md` 与 `README_en.md`：在特性介绍中同步补充 macOS 26 液态分段切换器与悬浮玻璃灵动岛架构描述。
+
+## [2.3.1] - 2026-09-18
+
+本版为 v2.3.0 的回归修复版本：三个缺陷均由 v2.3.0 的主题与终端改造引入，其中移动端入口缺失会直接阻断移动端用户使用 AI 助手。
+
+### Fixed / Changed
+
+- **移动端丢失 SFTP 与 AI Agent 入口（功能性阻断）**：
+  - v2.3.0 将 SFTP / 自定义命令 / AI Agent 三个抽屉按钮收进 `#terminal-drawer-segmented-bar`，并给该容器加上 `.desktop-terminal-action`；移动端媒体查询会整块隐藏它，而 `#mobile-more-menu` 当时只保留了「自定义命令」入口，于是移动端同时失去 SFTP 与 AI Agent 的打开方式（剩余路径仅“询问 AI 助手”浮动按钮，需先选中文本，不构成可用入口）；
+  - 现补回 `#mobile-sftp-btn` 与 `#mobile-agent-btn`，并把抽屉互斥开关抽成单一入口 `applyDrawerToggle()` 供桌面分段条与移动端菜单共用（不可用时回退透镜激活态）；移动端 AI Agent 入口的解锁状态与桌面按钮同步（登录解锁、一次性分享会话隐藏）。
+- **菜单按钮 `hidden` 失效（被掩盖的既有缺陷）**：
+  - `.mobile-more-menu > button` 的 `display: flex` 特异性高于 Tailwind 的 `.hidden`，因此往菜单按钮上加 `hidden` 完全无效——一次性分享会话一直尝试隐藏「自定义命令」入口却从未生效（违反 AGENTS.md #24），新增的 AI Agent 入口也会在匿名模式下泄露；
+  - 已补 `.mobile-more-menu > button.hidden { display: none }` 使其真正生效。
+- **Liquid Glass 下 AI 模型下拉与设置面板失去滚动能力**：
+  - 主题规则对 `:is(.server-card, .cyber-box)` 使用了 `overflow: hidden` 简写，会同时把 `overflow-x/overflow-y` 置为 hidden，且特异性高于 Tailwind 的 `.overflow-y-auto`；而 `#ai-model-menu` 与 `.responsive-modal-panel` 都带 `.cyber-box`，滚动能力被整体剥夺（大列表只能看到前几项且无法选择）；
+  - 现移除该简写，裁剪需求单独收敛到 `html[data-ui-style="liquid"] .server-card`。`.theme-accent-line` 在非 cyberpunk 风格下本就为 `opacity: 0`，故 Liquid Glass 下 `.cyber-box` 无需任何裁剪。
+- **AI 设置弹窗出现原生横向滚动条**：
+  - 「获取模型列表」按钮为 `shrink-0` 且 `#ai-model-combobox` 未声明 `min-width: 0`，flex 行无法收缩，整行比面板宽出约 80px；`overflow-y: auto` 使 `overflow-x` 计算为 `auto`，底部随即出现横向滚动条并把左侧标签挤出可视区；
+  - 现改为 `.responsive-modal-panel { overflow-x: hidden }` + 面板内 `.terminal-input { min-width: 0 }` + 组合框 `min-w-0`；并按内容适当放宽弹窗宽度（`sm:max-w-lg`），长模型 ID 在桌面端可完整展示。
+- **滚动条收敛到主题体系**：
+  - 新增全局主题化滚动条兜底（伪元素级 / 通配级特异性，`.custom-scrollbar`、`.no-scrollbar` 与组件自身规则仍按类优先级覆盖），4 套内置主题的 `--scrollbar-*` 变量自动生效；尺寸固定为 `--scrollbar-size: 8px`，避免切换主题时宽度变化引发终端列数需重算；
+  - 补齐从未实现的 `.no-scrollbar`（此前被 SFTP 面包屑、片段分类胶囊、Agent 快捷指令条引用但无定义，导致这些“本应隐藏滚动条”的容器一直显示原生滚动条）。
+
+## [2.3.0] - 2026-09-18
+
+### Added
+
+- **Theme V4 主题契约（`schemaVersion: 4`）**：
+  - 内置主题收敛为 Standard Dark、Standard Light、Cyberpunk、Liquid Glass 四款；退役的 `apple` / `gruvbox` / `crt` / `glass` 由新增 `LEGACY_BASE_THEME_MAP` 平滑映射到继任主题，历史自定义主题导入与本地恢复不再静默回退到默认配色；未登记的更早主题名（如 `glacier`）按规范丢弃 `baseTheme`，交由明暗方案兜底；
+  - `appearance.style` 枚举新增 `liquid` 液态玻璃外观档位；[在线主题编辑器](https://newbietan.github.io/CloudSSH/) 同步开放该选项——此前 `liquid` 只能由内置预设间接产生，用户无法手工选择或在切换后恢复；
+  - `schemaVersion` 仅在导出时写入、服务端不校验入参，因此全部 V2 / V3 历史主题文件继续可导入。
+- **Liquid Glass 内置主题**：以纯 CSS 光学管线还原 macOS 26 液态玻璃质感，与终端 WebGL 渲染路径正交。
+  - 全屏流体画布：5 节点 mesh 渐变色停靠点叠加全幅对角线性基底，顶栏 / 标签栏 / 底栏改为无界高透玻璃条，漂移动画缩放由 200% 收敛至 130% 以避免运动出画露白；
+  - 五层厚玻璃光影：大弥散环境阴影 + 顶棱 1px 镜面天光棱线 + 底缘内反光厚度辉光 + 1px 环形微描边，卡片 / 弹窗 / 浮层共用同一组 `--shadow-*` 令牌；
+  - 指针天光追踪：`pointermove` 经 `requestAnimationFrame` 节流后仅写入 `--mx` / `--my` 两个 CSS 变量，零重排地呈现跟随指针的镜面高光，触屏与无 hover 设备自动禁用；
+  - 液态过冲手感：按钮与卡片统一 `cubic-bezier(0.34, 1.56, 0.64, 1)` 过冲回弹与 `scale(0.965)` 按压形变。
+- **双边异步物理弹簧切换器**：主题切换与终端抽屉切换共用同一套阻尼谐振子引擎。
+  - 领先边（刚度 260 / 阻尼 26）快速前驱、拖后边（刚度 130 / 阻尼 15）滞后追赶，滑行途中透镜被真实拉长再弹性收束；弹簧停稳后立即断开 `requestAnimationFrame`，静止态零主线程消耗；
+  - 用户空间顶栏升级为全圆角悬浮玻璃灵动岛（主题分段条 + 操作微药丸胶囊），不再使用原生 `<select>` 下拉。
+- **终端抽屉分段切换器**：将 SFTP、自定义命令、AI Agent 三个抽屉整合为分段胶囊，互斥切换且透镜丝滑滑移，顶栏操作区同步编组为玻璃灵动岛。
+
+### Fixed / Changed
+
+- **抽屉打开时顶栏切换器不可点击**：抽屉原为全高浮层，且自定义命令遮罩覆盖全屏，打开后会完全盖住顶栏，导致只能在「关闭」与「某个抽屉」之间切换、无法在三个抽屉间直接切换；新增 `--drawer-top` 变量（桌面 `4rem` 对齐顶栏 `h-16`、移动端复位 `0`），抽屉与遮罩统一自顶栏下方展开。
+- **三大侧边抽屉几何与材质统一**：SFTP / 自定义命令 / AI Agent 此前各自以内联 `style.width` 声明宽度（420–600px 与 440–680px 不一致），现收敛为唯一来源；AI Agent 与 SFTP 内层包裹的不透明底色会盖住面板毛玻璃，已置为透明；自定义命令抽屉补齐此前缺失的移动端规则（触屏平板下不会停驻在 420px）。
+- **PC 端泄露移动端「更多操作」按钮**：`.terminal-header-actions > button` 的 `display: inline-flex` 特异性高于 `.mobile-only { display: none }`，已补 `:not(.mobile-only)` 并追加桌面端兜底规则。
+- **抽屉分段胶囊边缘不可辨识**：原纯白边框与单层极淡阴影在浅色玻璃底上完全糊掉，改为多层凹槽轮廓（外层冷色双描边 + 内侧顶光凹影 + 底缘内高光）。
+- **终端与全站留白**：Liquid Glass 终端卡片内边距由 16px 收窄至 `6px 12px`、状态栏底距由 16px 收敛至 6px；全主题终端底栏与用户空间底栏统一为 32px 紧凑高度。
+- **终端顶栏精简**：移除终端会话页的「上传自定义主题」入口（匿名模式不再支持自定义主题导入，用户空间入口保留）。
+- **Liquid Glass 命令片段搜索框**：修复双重边框与搜索图标被遮挡。
+- **文案**：命令片段抽屉分段标签由「片段」改为「自定义命令」，完整名称保留在原生 tooltip 中（英文 Snippets → Commands）。
+- **测试稳定性**：`mobile-terminal.spec.ts` 三处用例在 `page.goto` 后立即手工提升 `#terminal-section`，而 `init()` 在 `/api/auth/me` 返回后会经 `showAuthSection() → deactivateTerminalView()` 再次隐藏该区域，并行执行时偶发失败；现统一等待 `#connection-form` 可见。
+
+## [2.2.9] - 2026-09-17
+
+### Added
+
+- **AI Agent 任务手动停止（Stop / Abort）**：
+  - 底部发送按钮在任务运行中动态切换为停止形态，附带醒目强调色与停止图标；
+  - 点击停止通过 WebSocket 下发优先控制帧 `agent_stop`，即时中止大模型流式推理与远端 SSH 命令执行通道；若处于 `agent_confirm` 等待期立即安全驳回确认；
+  - 后端精准区分用户手动停止与执行超时，下发友好中英文提示并更新气泡状态。
+- **未完成任务抢占式重发（In-Progress Supersede）**：
+  - 支持在任务进行中直接编辑输入框并提交，前端自动将上一条标记为已中止（`[已中止]` 徽标与取消图标）；
+  - 前端下发 `supersede: true` 标记，后端抢占式中止旧任务，避免并发通道竞争与 Token 浪费；
+  - 基于最新 200 行终端输出快照，新任务无缝继承当前服务器真实状态。
+- **Claude 风格气泡原地编辑与后续轮次物理清理**：
+  - 用户提问气泡悬浮操作栏提供编辑按钮，点击直接在原气泡位置就地展开内联输入框，主题色高亮边框，支持自适应高度（24–200px）、`Enter` 快捷提交与 `Esc` 取消；
+  - 原地编辑提交时，前端物理清除当前消息之后的所有后续节点（思考、执行、回复），后端接收 `userIndex` 精准切片截断历史对话上下文，消除无效多余留痕；
+  - 原地编辑重发与普通发送共享 `supersede` 抢占保护机制，杜绝极端时序下的并发冲突。
+- **会话重置与新建对话（New Chat / Reset）**：
+  - 面板顶栏新增新建会话按钮（`+` 图标），支持二次确认后彻底清空 DOM、消息历史与本地草稿；
+  - 后端下发 `agent_reset` 重置会话与迭代轮次，重置时不触发多余的记忆提炼，下一轮提问作为崭新会话重新触发环境感知。
+- **用户提问气泡悬浮操作栏（Floating Actions）**：
+  - 气泡外部左侧悬浮展示复制提问与编辑按钮，彻底移除原本气泡底部的操作预留空间，消除气泡底部空白；
+  - 触屏设备（`pointer: coarse`）保持常驻可用。
+
+### Fixed / Changed
+
+- **流式半成品残影物理清理**：
+  - 修复任务在流式生成途中被中止时，前端残留未闭合半截 Markdown 内容与后续提示上下并存的问题，统一执行流式节点物理移除。
+- **全站侧边抽屉与弹窗关闭按钮统一度量**：
+  - 为 SFTP 面板、自定义命令片段抽屉、Agent 备忘录及各设置弹窗关闭按钮统一定义 `.panel-close-btn`，规整为 28×28px 弹性居中方块，统一 hover 微交互。
+- **Agent 顶栏图标对齐与助手头像首行垂直居中**：
+  - 统一定义 `.agent-header-btn` 规格，消除顶栏按钮因内边距与行高导致的高低错位；
+  - 新增 `.agent-role-icon-wrapper` 规范助手角色图标为 21px 容器居中并重置首行子元素外边距，彻底解决机器人图标与文本第一行的漂高错位。
+- **CSS 级联选择器特异性修复**：
+  - 修复因 CSS“后者胜出”原则导致 `.agent-mobile-back` 覆盖 `display: none`、使桌面端误显移动端返回箭头的缺陷，通过 `:not(.agent-mobile-back)` 严格隔离桌面与移动端视图。
+
+## [2.2.8] - 2026-09-16
+
+### Added
+
+- **用户无操作空闲会话超时机制（Inactivity Timeout，关联 #135）**：
+  - 激活并支持通过 `IDLE_TIMEOUT` 环境变量配置空闲超时时长，默认启用 30 分钟（`30m`）；
+  - 支持多单位时间解析（如 `30m`、`1h`、`1800s`、`1800` 纯数字按秒解析），支持设为 `0`/`false` 禁用，并内置 10 秒最小正数值保护；
+  - `SSHSession` 引入 `lastUserActivityAt` 精准交互时间戳：仅真实用户交互（键盘输入、窗口 `resize`、SFTP 传输/操作、AI 助手执行、会话恢复）会刷新活跃时间；前端 WebSocket ping 心跳、底层 SSH keepalive 以及远端服务器被动输出（如后台挂着 `top` 刷屏）绝不重置计时器，彻底杜绝挂机会话长时间消耗 Cloudflare Durable Object 每日免费额度（13,000 GB-s）；
+  - 超时到达时后端向前端发送 `session_idle_timeout` 结构化事件，并以标准正常状态码（code 1000）优雅断开连接，释放 DO 内存与底层 TCP Socket；前端终端输出醒目提示并禁止自动重连。
+- **AI Agent 运行态保护**：
+  - 空闲看门狗判断中加入 Agent 运行态守卫（`agentCore.getStatus() === 'running'`），只要 AI 助手在执行长任务或诊断命令，会话自动维持活跃，防止执行多步自动化运维时被误判超时。
+- **空闲超时前预警提示（session_idle_warning）**：
+  - 在空闲时间到达距超时前 60 秒时，向终端输出状态提示事件 `session_idle_warning`（中英双语对齐），正在盯盘（如实时查看 `top` 或 `tail -f`）的用户可在终端看到黄色预警提示，只需敲击任意键即可一秒续期 30 分钟。
+- **全量环境变量速查表**：
+  - 在 `README.md` 与 `README_en.md` 的快速部署模块扩展为 5 列表格，详尽覆盖全部 11 项环境变量及预留变量的必填性、默认值、功能说明与配置建议，消除查阅环境变量的成本。
+
+### Changed
+
+- **文档结构折叠与精简**：
+  - 将 `README.md` 与 `README_en.md` 中的「目录」、「核心特性」及「本地开发」模块包装为可折叠区块（`<details>`/`<summary>`），默认保持折叠，大幅降低首屏篇幅与滚动负担；
+  - 移除已冗余的「技术栈」表格与目录链接，精简并对齐中英文部署步骤与开源协议署名声明。
+
+## [2.2.7] - 2026-09-16
+
+### Added
+
+- **GitHub Pages 部署工作流支持手动触发**：
+  - 在 `.github/workflows/github-pages.yml` 的触发事件中新增 `workflow_dispatch`，支持在 GitHub Actions 控制台手动触发构建和发布，便于在不变更 `docs/**` 文档的情况下按需部署 GitHub Pages 主题编辑器。
+
 ## [2.2.6] - 2026-09-14
 
 ### Added
