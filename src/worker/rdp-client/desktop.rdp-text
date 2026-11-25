@@ -53,7 +53,7 @@ const viewportSize = () => {
   return [Math.max(200, Math.floor(w * scale / 2) * 2), Math.max(200, Math.floor(h * scale / 2) * 2)];
 };
 const api = '/api/rdp/profiles/' + location.pathname.split('/')[2];
-const clientRevision = '4'; // Keep aligned with src/rdp-schema.ts when changing the browser ABI.
+const clientRevision = '5'; // Keep aligned with src/rdp-schema.ts when changing the browser ABI.
 const trust = trustText[locale];
 const certificate = el('certificate');
 const acceptCertificate = el('certificate-accept');
@@ -257,9 +257,17 @@ async function run() {
         clearTimeout(resizeTimer); resizeTimer = setTimeout(() => layout(true), 550);
       },
       onWindowsFirstFrame() {
-        if (stopped) return;
+        if (stopped || ready) return;
         clearTimeout(timer);
         ready = true;
+        // Cancel browser defaults only on the live canvas. SDL receives the original pointer events.
+        const options = { signal: abort.signal };
+        canvas.addEventListener('contextmenu', event => event.preventDefault(), options);
+        const keepSideButton = event => {
+          if (event.button === 3 || event.button === 4) event.preventDefault();
+        };
+        // Chromium navigates on mouseup; canceling auxclick alone does not keep the session open.
+        for (const type of ['mousedown', 'mouseup', 'auxclick']) canvas.addEventListener(type, keepSideButton, options);
         socket?.reportDesktopReady?.();
         monitorLatency();
         tellWorkspace('ready');
@@ -278,6 +286,12 @@ async function run() {
       onRuntimeInitialized() {
         if (stopped) return;
         void (async () => {
+          // SDL reads this per-user preset at native startup. KMOD_NONE disables its *local*
+          // hotkeys (notably Right Shift+D disconnect), without remapping remote scancodes.
+          // This is the pinned client's in-memory filesystem, not the browser or Windows disk.
+          const prefs = '/home/web_user/.config/freerdp';
+          window.Module.FS.mkdirTree(prefs);
+          window.Module.FS.writeFile(prefs + '/sdl-freerdp.json', '{"SDL_KeyModMask":["KMOD_NONE"]}');
           show(13);
           watch(20_000, 22);
           const issued = await request(api + '/connect', { method: 'POST', signal: abort.signal, headers: {
@@ -297,6 +311,7 @@ async function run() {
           window.Module.websocket.on?.('close', () => finish(ready ? 16 : 19));
           initialSize = viewportSize();
           layout(true);
+          // Local placeholder for the WASM socket adapter. Only the Worker's claimed profile selects the TCP destination.
           const args = ['/v:127.0.0.1:3389', '/u:' + username, '/sec:nla', '/cert:deny',
             '/size:' + initialSize.join('x'), '/dynamic-resolution', '-clipboard', '-auto-reconnect', '/audio-mode:2', '/log-level:OFF'];
           if (domain) args.push('/d:' + domain);

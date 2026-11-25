@@ -179,7 +179,9 @@ function showTerminalSection(): void {
   if (!tabManager || !tabManager.hasAnyTab()) return;
   tabManager.getActiveTab()?.agentPanel?.rejectPendingConfirmation(false);
   activateTerminalView();
-  tabManager.getActiveTab()?.terminal.fit();
+  const terminal = tabManager.getActiveTab()?.terminal;
+  terminal?.setRemoteCopyVisible(true);
+  terminal?.fit();
 }
 
 function bindBackToTerminalButtons(): void {
@@ -191,7 +193,8 @@ function bindBackToTerminalButtons(): void {
   });
   // 支持 Esc 快速返回已有的终端会话
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
+    // RDP owns the foreground, including its toolbar and fullscreen exit. Leave the SSH view untouched.
+    if (event.key !== 'Escape' || document.querySelector('dialog.rdp-workspace[open]')) return;
     const terminalHidden =
       document.getElementById('terminal-section')?.classList.contains('hidden') ?? true;
     if (!terminalHidden) return;
@@ -264,13 +267,20 @@ function initTerminalTab(): void {
   const ws = new WebSocket(wsUrl);
   ws.binaryType = 'arraybuffer';
   const hostInfo = host && port ? { host, port } : undefined;
-  tab.terminal.connectWithWebSocket(ws, hostInfo);
+  // A standalone URL may point at a share or a resume of unknown origin. Never grant
+  // clipboard access for those; the normal in-app resume inherits the original policy.
+  const endpoint = new URL(wsUrl);
+  const allowRemoteCopy = endpoint.pathname === '/api/ssh' &&
+    !['share_ref', 'share_ticket', 'session', 'resume_token'].some(key => endpoint.searchParams.has(key));
+  tab.terminal.connectWithWebSocket(ws, hostInfo, { allowRemoteCopy });
 }
 
 // ==================== 页面切换 ====================
 
 function deactivateTerminalView(): void {
-  tabManager?.getActiveTab()?.terminal.cancelPendingPaste();
+  const terminal = tabManager?.getActiveTab()?.terminal;
+  terminal?.cancelPendingPaste();
+  terminal?.setRemoteCopyVisible(false);
   closeAllDrawers();
   mobileTerminalController.leaveTerminal();
   document.getElementById('terminal-section')!.classList.add('hidden');

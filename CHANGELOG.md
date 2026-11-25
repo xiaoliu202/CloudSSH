@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.4] - 2026-11-24
+
+### Added
+
+- **Windows 远程桌面自定义直连端口**：新增或编辑 Windows Server 时可填写 TCP 端口，默认仍为 `3389`，已有设备无需迁移配置。更改端口时需重新录入 Windows 密码并核对证书指纹。Cloudflare Tunnel 的目标端口仍在 `cloudflared` 中配置。关联 Issue：[#208](https://github.com/newbietan/CloudSSH/issues/208)。
+
+### Changed
+
+- Windows 设备表单的线路、主机和登录字段图标与 SSH 表单统一。
+
+## [2.12.3] - 2026-11-24
+
+### Fixed
+
+- **Windows 远程桌面键盘焦点**：桌面就绪或进出全屏后可直接打字，回车不再误触「返回」或切换全屏。用户主动选中的「返回」按钮和证书确认弹窗仍保留焦点。
+- **右键和鼠标侧键**：在远程画面内点击右键不再弹出浏览器菜单，前进／后退侧键也不会触发浏览器导航或断开桌面；画面外的浏览器操作不变。
+- **远程桌面快捷键冲突**：右 Shift + D 不再触发 FreeRDP 本地断开快捷键；在 RDP 工具栏按 Esc 也不会切换到底层 SSH 标签。
+
+## [2.12.2] - 2026-11-24
+
+### Added
+
+- **远端终端复制（OSC 52）**：Herdr 等远端程序可在前台终端将纯文本写入浏览器剪贴板，无需应用内授权。仅响应近期本地操作；浏览器拦截时提供一次点击或键盘重试。后台输出、分享会话和剪贴板读取不开放。关联 Issue：[#204](https://github.com/newbietan/CloudSSH/issues/204)。
+
+### Changed
+
+- **生产发布不重复跑浏览器测试**：由 `test` push 完整验证并部署测试环境，`main` 核验同一 Git tree 的全量通过记录后，只重新构建和部署生产。发布 PR 在内容一致时会自动等待仍在排队或运行的 `test` push；实际生产部署仍须已有合格记录，缩减浏览器档位不能放行。
+- **文档精简**：用 [RDP 使用指南](docs/rdp.md) 替代旧实施计划，保留配置、安全限制和真机验收；同步裁减字体与移动端的一次性说明。
+- **GitHub Pages 按需发布**：仅在 `main` 的主题编辑器或 Pages 首页文件变更时自动发布；普通文档或 `test` 推送不触发。保留 `main` 手动发布入口。
+
+### Fixed
+
+- **GitHub Pages 偶发找不到已上传产物**：部署前有界等待并校验本次上传的产物元数据，不重复发起部署。
+
 ## [2.12.1] - 2026-11-24
 
 ### Changed
