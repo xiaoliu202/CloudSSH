@@ -21,6 +21,7 @@ export class MobileShortcutsManager {
   private activeShortcuts: MobileShortcutItem[] = buildDefaultMobileShortcuts().shortcuts;
   private listeners = new Set<ShortcutsChangeListener>();
   private modalEl: HTMLElement | null = null;
+  private savedShortcuts: readonly MobileShortcutItem[] = [];
   private draftShortcuts: MobileShortcutItem[] = [];
   private isSaving = false;
 
@@ -93,6 +94,7 @@ export class MobileShortcutsManager {
 
   showModal(): void {
     if (!this.loggedIn) return;
+    this.savedShortcuts = this.getShortcuts();
     this.draftShortcuts = this.getShortcuts();
     if (!this.modalEl) {
       this.createModalDOM();
@@ -137,7 +139,10 @@ export class MobileShortcutsManager {
     const modal = document.createElement('div');
     modal.id = 'mobile-shortcuts-modal';
     modal.className =
-      'responsive-modal hidden fixed inset-0 z-[110] flex items-center justify-center';
+      'app-modal responsive-modal hidden fixed inset-0 z-[110] flex items-center justify-center';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'mobile-shortcuts-title');
 
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-overlay absolute inset-0';
@@ -145,24 +150,20 @@ export class MobileShortcutsManager {
 
     const panel = document.createElement('div');
     panel.className =
-      'responsive-modal-panel cyber-box p-4 sm:p-6 shadow-2xl relative z-10 w-full max-w-lg mx-3 flex flex-col max-h-[88vh]';
+      'app-modal__panel app-modal__inset responsive-modal-panel z-10 w-full max-w-lg mx-3 flex flex-col max-h-[88vh]';
 
-    const accentLine = document.createElement('div');
-    accentLine.className =
-      'theme-accent-line absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-50';
+    const header = document.createElement('header');
+    header.className = 'app-modal__header mb-3';
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between pb-3 mb-3 border-b border-dim shrink-0';
-
-    const titleEl = document.createElement('span');
-    titleEl.className = 'text-xs font-bold tracking-[0.08em] text-primary';
+    const titleEl = document.createElement('h2');
+    titleEl.id = 'mobile-shortcuts-title';
+    titleEl.className = 'app-modal__title';
     titleEl.dataset.i18n = 'mobileShortcuts.title';
     titleEl.textContent = t('mobileShortcuts.title');
 
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
-    closeBtn.className = 'panel-close-btn';
+    closeBtn.className = 'app-modal__close';
     closeBtn.dataset.i18nAriaLabel = 'common.close';
     closeBtn.setAttribute('aria-label', t('common.close'));
     const closeIcon = document.createElement('span');
@@ -296,7 +297,7 @@ export class MobileShortcutsManager {
     rightActions.append(cancelBtn, saveBtn);
     footer.append(resetBtn, rightActions);
 
-    panel.append(accentLine, header, body, footer);
+    panel.append(header, body, footer);
     modal.append(backdrop, panel);
     document.body.appendChild(modal);
     this.modalEl = modal;
@@ -448,6 +449,20 @@ export class MobileShortcutsManager {
         presetsEl.appendChild(groupWrap);
       }
     }
+    this.syncSaveButton();
+  }
+
+  private hasDraftChanges(): boolean {
+    // Order is part of the toolbar configuration; uncommitted custom-input text is not.
+    return this.draftShortcuts.length !== this.savedShortcuts.length || this.draftShortcuts.some((item, index) => {
+      const saved = this.savedShortcuts[index];
+      return item.id !== saved.id || item.label !== saved.label || item.type !== saved.type || item.value !== saved.value;
+    });
+  }
+
+  private syncSaveButton(): void {
+    const save = this.modalEl?.querySelector<HTMLButtonElement>('#mobile-shortcuts-save-btn');
+    if (save) save.disabled = this.isSaving || !this.hasDraftChanges();
   }
 
   private togglePresetInDraft(preset: PresetShortcutDefinition): void {
@@ -515,7 +530,7 @@ export class MobileShortcutsManager {
   }
 
   private async handleSaveDraft(): Promise<void> {
-    if (this.isSaving) return;
+    if (!this.loggedIn || this.isSaving || !this.hasDraftChanges()) return;
     const normalized = normalizeMobileShortcutsPayload({ shortcuts: this.draftShortcuts });
     if (!normalized) {
       notify(t('mobileShortcuts.saveFailed'), { variant: 'danger' });
@@ -523,8 +538,7 @@ export class MobileShortcutsManager {
     }
 
     this.isSaving = true;
-    const saveBtn = this.modalEl?.querySelector<HTMLButtonElement>('#mobile-shortcuts-save-btn');
-    if (saveBtn) saveBtn.disabled = true;
+    this.syncSaveButton();
 
     try {
       const res = await fetch('/api/user/mobile-shortcuts', {
@@ -538,7 +552,9 @@ export class MobileShortcutsManager {
         return;
       }
 
+      if (!this.loggedIn) return;
       this.activeShortcuts = normalized.shortcuts;
+      this.savedShortcuts = this.getShortcuts();
       this.writeLocalCache(normalized.shortcuts);
       this.emitChange();
       notify(t('mobileShortcuts.saved'), { variant: 'success' });
@@ -547,13 +563,14 @@ export class MobileShortcutsManager {
       notify(t('mobileShortcuts.saveFailed'), { variant: 'danger' });
     } finally {
       this.isSaving = false;
-      if (saveBtn) saveBtn.disabled = false;
+      this.syncSaveButton();
     }
   }
 
   private async handleResetDefault(): Promise<void> {
-    if (this.isSaving) return;
+    if (!this.loggedIn || this.isSaving) return;
     this.isSaving = true;
+    this.syncSaveButton();
 
     try {
       const res = await fetch('/api/user/mobile-shortcuts', {
@@ -564,9 +581,11 @@ export class MobileShortcutsManager {
         return;
       }
 
+      if (!this.loggedIn) return;
       const defaults = buildDefaultMobileShortcuts().shortcuts;
       this.activeShortcuts = defaults;
-      this.draftShortcuts = defaults.map((s) => ({ ...s }));
+      this.savedShortcuts = this.getShortcuts();
+      this.draftShortcuts = this.getShortcuts();
       this.clearLocalCache();
       this.emitChange();
       this.renderDraftState();
@@ -575,6 +594,7 @@ export class MobileShortcutsManager {
       notify(t('mobileShortcuts.saveFailed'), { variant: 'danger' });
     } finally {
       this.isSaving = false;
+      this.syncSaveButton();
     }
   }
 }

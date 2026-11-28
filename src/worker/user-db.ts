@@ -1,6 +1,7 @@
 import { normalizeAIBaseUrl } from '../ai-endpoint';
-import { McpStore } from './mcp-store';
+import { McpConfigError, McpStore } from './mcp-store';
 import { RdpStore } from './rdp-store';
+import { RdpDevices } from './rdp-devices';
 import { executionName } from './mcp-auth';
 import type { McpActivity } from '../mcp-schema';
 import { resolveModelBudget } from '../ai-model-policy';
@@ -453,6 +454,11 @@ export class UserDBDO {
     this.db.exec('DROP TABLE IF EXISTS server_task_checkpoints');
   }
 
+  // Only the resident RDP standby uses the Hibernation API. Its exact ping is handled by the runtime.
+  webSocketMessage(ws: WebSocket): void { RdpDevices.unexpected(ws); }
+  webSocketError(ws: WebSocket): void { RdpDevices.unexpected(ws); }
+  webSocketClose(ws: WebSocket): void { try { ws.close(1000); } catch { /* already closed */ } }
+
   async fetch(request: Request): Promise<Response> {
     try {
       const url = new URL(request.url);
@@ -463,6 +469,7 @@ export class UserDBDO {
           this.db, callback => this.mcpState.storage.transactionSync(callback),
           (value, id) => this.encryptCredential(value, id),
           (value, id) => this.decryptCredential(value, id),
+          this.mcpState,
         );
         return await this.rdpStore.handle(request);
       }
@@ -1557,14 +1564,7 @@ export class UserDBDO {
         this.connectTokens.delete(token);
       }
     }
-    const execution = this.env.MCP_EXECUTION;
-    if (pool && execution) {
-      try {
-        await execution.get(execution.idFromName(executionName(pool))).fetch(
-          new Request(`https://internal/invalidate/${serverId}`, { method: 'POST', signal: AbortSignal.timeout(4000) })
-        );
-      } catch { /* Already committed; subsequent calls recheck grants. Idle pools expire. */ }
-    }
+    if (pool) await this.invalidateMcpPool(pool, serverId);
     return Response.json({ success: true });
   }
 
@@ -2249,16 +2249,39 @@ export class UserDBDO {
     return Response.json({ token });
   }
 
+  private async invalidateMcpPool(pool: { routeKey: string; id: string }, serverId?: number): Promise<void> {
+    const execution = this.env.MCP_EXECUTION;
+    if (!execution) return;
+    const path = serverId === undefined ? '/invalidate' : `/invalidate/${serverId}`;
+    try {
+      await execution.get(execution.idFromName(executionName(pool))).fetch(
+        new Request(`https://internal${path}`, { method: 'POST', signal: AbortSignal.timeout(4000) })
+      );
+    } catch { /* Already committed; subsequent calls recheck the DB. Idle pools expire. */ }
+  }
+
   private async handleMcp(request: Request): Promise<Response> {
     const body = await request.json<{ action: string; userId: number; routeKey: string; modeTag: string;
-      token: string; id: string; input: unknown; serverId: number; activity: McpActivity }>();
+      token: string; expectedId: string; input: unknown; serverId: number; activity: McpActivity }>();
     const store = this.mcpStore;
-    if (['settings', 'create', 'update', 'credentials'].includes(body.action)) {
+    if (['settings', 'create', 'update', 'credentials', 'rotate'].includes(body.action)) {
       try {
         if (body.action === 'settings') return Response.json(store.get(body.userId, body.routeKey, body.modeTag));
         if (body.action === 'credentials') return Response.json(await store.credentials(body.userId, body.routeKey, body.modeTag));
+        if (body.action === 'rotate') {
+          const { id, previousId } = await store.rotate(body.userId, body.routeKey, body.modeTag, body.expectedId);
+          // Never look up the current generation for cleanup: it may already be in use.
+          this.mcpState.waitUntil(this.invalidateMcpPool({ routeKey: body.routeKey, id: previousId }));
+          return Response.json({ id });
+        }
         return Response.json(await store[body.action === 'create' ? 'create' : 'update'](body.userId, body.routeKey, body.modeTag, body.input));
-      } catch { return Response.json({ error: 'invalid_mcp_configuration' }, { status: 400 }); }
+      } catch (error) {
+        if (error instanceof McpConfigError)
+          return Response.json({ error: error.code }, { status: error.code === 'mcp_config_changed' ? 409 : 404 });
+        return body.action === 'rotate'
+          ? Response.json({ error: 'mcp_rotation_failed' }, { status: 500 })
+          : Response.json({ error: 'invalid_mcp_configuration' }, { status: 400 });
+      }
     }
     if (body.action === 'activity') return Response.json(store.activity(body.userId));
     if (body.action === 'owns_server') {
